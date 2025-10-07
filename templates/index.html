@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Consumption Prediction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white shadow-lg rounded-lg p-8 max-w-md w-full">
+        <h1 class="text-2xl font-bold text-center mb-4">Power Consumption Predictor</h1>
+
+        <p class="text-gray-600 text-sm text-center mb-6">
+            Tetouan, a city in northern Morocco, spans 10,375 km² with a population of over 550,000. Powered by 3 zones—Quads, Smir, and Boussafou—the electricity distribution network serves low and medium voltage consumers. This tool helps predict power consumption in these zones based on environmental conditions.
+        </p>
+        <form id="prediction-form" class="space-y-4">
+            <div>
+                <label for="dateTime" class="block text-gray-700 font-medium">Date & Time</label>
+                <input type="datetime-local" id="dateTime" name="dateTime" class="w-full mt-2 p-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">
+            </div>
+
+            <div>
+                <label for="humidity" class="block text-gray-700 font-medium">Humidity (%)</label>
+                <input type="number" id="humidity" name="humidity" step="0.1" class="w-full mt-2 p-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">
+            </div>
+
+            <div>
+                <label for="windSpeed" class="block text-gray-700 font-medium">Wind Speed (m/s)</label>
+                <input type="number" id="windSpeed" name="windSpeed" step="0.1" class="w-full mt-2 p-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">
+            </div>
+
+            <div>
+                <label for="temperature" class="block text-gray-700 font-medium">Temperature (°C)</label>
+                <input type="number" id="temperature" name="temperature" step="0.1" class="w-full mt-2 p-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300">
+            </div>
+
+            <button type="button" id="predict-button" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring focus:ring-blue-300">Predict</button>
+        </form>
+
+        <div id="output" class="mt-6 hidden">
+            <div id="message" class="mt-4 hidden text-center"></div>
+            <h2 class="text-xl font-bold text-center">Prediction Results</h2>
+            <p class="mt-4 text-gray-700">Zone 1: <span id="zone1" class="font-bold"></span> kWh</p>
+            <p class="mt-2 text-gray-700">Zone 2: <span id="zone2" class="font-bold"></span> kWh</p>
+            <p class="mt-2 text-gray-700">Zone 3: <span id="zone3" class="font-bold"></span> kWh</p>
+        </div>
+    </div>
+
+<script>
+    document.getElementById('predict-button').addEventListener('click', async () => {
+        const messageElement = document.getElementById('message');
+
+        const dateTime = document.getElementById('dateTime').value;
+        const humidity = parseFloat(document.getElementById('humidity').value);
+        const windSpeed = parseFloat(document.getElementById('windSpeed').value);
+        const temperature = parseFloat(document.getElementById('temperature').value);
+
+        const payload = {
+            dateTime,
+            humidity,
+            windSpeed,
+            temperature
+        };
+
+        try {
+            messageElement.classList.add('hidden');
+
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const parseFloatOrZero = (value) => {
+                try {
+                    const parsed = parseFloat(value);
+                    if (Number.isNaN(parsed)) {
+                        return 0;
+                    }
+                    return parsed
+                } catch (e) {
+                    return 0
+                }
+            }
+
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('zone1').textContent = Math.max(0, parseFloatOrZero(data.zone1).toFixed(2))
+                document.getElementById('zone2').textContent = Math.max(0, parseFloatOrZero(data.zone2).toFixed(2))
+                document.getElementById('zone3').textContent = Math.max(0, parseFloatOrZero(data.zone3).toFixed(2))
+                document.getElementById('output').classList.remove('hidden');
+
+                // Show success message
+                messageElement.textContent = 'Prediction retrieved successfully!';
+                messageElement.className = 'mt-4 text-green-600 font-bold text-center';
+                messageElement.classList.remove('hidden');
+            } else {
+                messageElement.textContent = 'Failed to fetch predictions. Please try again.';
+                messageElement.className = 'mt-4 text-red-600 font-bold text-center';
+                messageElement.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            messageElement.textContent = 'An error occurred while making the prediction.';
+            messageElement.className = 'mt-4 text-red-600 font-bold text-center';
+            messageElement.classList.remove('hidden');
+        }
+    });
+</script>
+</body>
+</html>
